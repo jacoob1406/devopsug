@@ -4,7 +4,7 @@ services:
   - docker
 
 before_install:
-  - docker build -t lemjak/frontend -f Dockerfile.dev ./frontend
+  - docker build -t lemjak/frontend -f Dockerfile.dev ./frontend .
 
 script:
   - docker run -e CI=true lemjak/frontend yarn test
