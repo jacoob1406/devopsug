@@ -1,65 +1,66 @@
 const keys = require("./keys");
-
 const express = require("express");
+const redis = require("redis");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+
+const countGcd = (a, b) => {
+  if (b) {
+    return countGcd(b, a % b);
+  } else {
+    return Math.abs(a);
+  }
+};
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-console.log(keys);
-
 const { Pool } = require("pg");
 const pgClient = new Pool({
-  user: keys.pgUser,
   host: keys.pgHost,
-  database: keys.pgDatabase,
-  password: keys.pgPassword,
   port: keys.pgPort,
+  user: keys.pgUser,
+  password: keys.pgPassword,
+  database: keys.pgDatabase,
 });
 
 pgClient.on("error", () => console.log("Lost PG connection"));
 
 pgClient
-  .query("CREATE TABLE IF NOT EXISTS values (number INT)")
+  .query("CREATE TABLE IF NOT EXISTS gcd_values (number INT);")
   .catch((err) => console.log(err));
 
-const client = redis.createClient({
+const redisClient = redis.createClient({
   host: keys.redisHost,
   port: keys.redisPort,
 });
 
-app.get("/gcd/:num1/:num2", (req, res) => {
-  const key = `GCD(${req.query.num1},${req.query.num2})`;
-  client.get(key, (err, value) => {
-    if (!value) {
-      console.log("GCD not found in cache");
-      const gcd = gcd(parseInt(req.query.num1), parseInt(req.query.num2));
-      client.set(key, parseInt(gcd));
-      const query = `INSERT INTO values(number) VALUES (${gcd})`;
-      pgClient.query(query);
-      res.send({ gcd });
+app.get("/gcd/values", (request, response) => {
+  pgClient.query("SELECT * FROM gcd_values;", (pgError, queryResult) => {
+    response.send(queryResult.rows);
+  });
+});
+
+app.get("/gcd/:num1/:num2", (request, response) => {
+  const num1 = parseInt(request.params.num1);
+  const num2 = parseInt(request.params.num2);
+  const dbGcd = [num1, num2].sort((a, b) => a - b).toString();
+
+  redisClient.get(dbGcd, (err, cachedGcd) => {
+    if (!cachedGcd) {
+      const countedGcd = countGcd(num1, num2);
+      pgClient
+        .query("INSERT INTO gcd_values (number) VALUES ('" + countedGcd + "');")
+        .catch((pgError) => console.log(pgError));
+      redisClient.set(dbGcd, countedGcd);
+      response.send(`gcd(${num1},${num2}) = ${countedGcd}`);
     } else {
-      console.log("GCD from CACHE");
-      res.send({ gcd: value });
+      response.send(`from cache: gcd(${num1},${num2}) = ${cachedGcd}`);
     }
   });
 });
 
-app.get("/gcd/values", (req, res) => {
-  const result = pgClient.query("SELECT * FROM values");
-  res.send({ gcd: result.rows });
-});
-
-const gcd = (a, b) => {
-    if (b) {
-        return gcd(b, a % b);
-      } else {
-        return Math.abs(a);
-      }
-  }
-
-app.listen(5000, () => {
+app.listen(5000, (err) => {
   console.log("Backend listening");
 });
