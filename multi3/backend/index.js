@@ -3,15 +3,10 @@ const express = require("express");
 const redis = require("redis");
 const bodyParser = require("body-parser");
 const cors = require("cors");
+const getDay = require("date-fns/getDay");
 
-console.log(keys);
-
-const countGcd = (a, b) => {
-  if (b) {
-    return countGcd(b, a % b);
-  } else {
-    return Math.abs(a);
-  }
+const getDayOfWeek = (date) => {
+  return getDay(new Date(date));
 };
 
 const app = express();
@@ -30,7 +25,7 @@ const pgClient = new Pool({
 pgClient.on("error", () => console.log("Cannot connect to PG database"));
 
 pgClient
-  .query("CREATE TABLE IF NOT EXISTS gcd_values (number INT);")
+  .query("CREATE TABLE IF NOT EXISTS values (number INT);")
   .catch((err) => console.log(err));
 
 const redisClient = redis.createClient({
@@ -43,27 +38,28 @@ app.get("/", (request, response) => {
   response.send("Hello from backend");
 });
 
-app.get("/gcd/values", (request, response) => {
-  pgClient.query("SELECT * FROM gcd_values;", (pgError, queryResult) => {
-    response.send(queryResult.rows);
+app.get("/days/values", (request, response) => {
+  pgClient.query("SELECT * FROM values;", (pgError, queryResult) => {
+    if (!queryResult.rows) {
+      response.json([]);
+    } else {
+      response.json(queryResult.rows);
+    }
   });
 });
 
-app.get("/gcd/:num1/:num2", (request, response) => {
-  const num1 = parseInt(request.params.num1);
-  const num2 = parseInt(request.params.num2);
-  const dbGcd = [num1, num2].sort((a, b) => a - b).toString();
-
-  redisClient.get(dbGcd, (err, cachedGcd) => {
-    if (!cachedGcd) {
-      const countedGcd = countGcd(num1, num2);
+app.get("/days/:date", (request, response) => {
+  const date = request.params.date;
+  redisClient.get(date, (err, cachedDay) => {
+    if (!cachedDay) {
+      const countedDay = getDayOfWeek(date);
       pgClient
-        .query("INSERT INTO gcd_values (number) VALUES ('" + countedGcd + "');")
+        .query("INSERT INTO values (number) VALUES ('" + countedDay + "');")
         .catch((pgError) => console.log(pgError));
-      redisClient.set(dbGcd, countedGcd);
-      response.send(`gcd(${num1},${num2}) = ${countedGcd}`);
+      redisClient.set(date, countedDay);
+      response.send(countedDay.toString());
     } else {
-      response.send(`from cache: gcd(${num1},${num2}) = ${cachedGcd}`);
+      response.send(cachedDay.toString());
     }
   });
 });
@@ -72,4 +68,5 @@ const port = 5000;
 
 app.listen(port, (err) => {
   console.log(`Backend listening on port ${port}`);
+  console.log(keys);
 });
