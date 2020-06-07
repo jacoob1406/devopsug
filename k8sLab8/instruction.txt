@@ -1,0 +1,22 @@
+PUSH CONTAINER TO YOUR DOCKER HUB
+in /mybackend :
+docker build -t jakublem/mybackend .
+docker push jakublem/mybackend
+
+CREATE FROM FILES:
+kubectl create -f dnsutils.yml
+kubectl create -f redis-deployment.yml
+kubectl create -f redis-service-clusterip.yml
+kubectl create -f mybackend-deployment.yml
+kubectl create -f mybackend-service-nodeport.yml
+
+CHECK BY CURL / IN BROWSER:
+curl localhost:30008
+--> [cad5bbde-dc3c-4f83-a34e-4019bb1e2c0a] Hello from my backend app
+
+TO DELETE EVERYTHING:
+kubectl delete pod dnsutils
+kubectl delete deploy my-redis-deployment
+kubectl delete svc redis-service
+kubectl delete deploy my-backend-deployment
+kubectl delete svc mybackend-service
