@@ -39,18 +39,6 @@ app.get("/", (request, response) => {
   response.send(`[${appId}] Hello from my backend app`);
 });
 
-// app.get("/days/values", (request, response) => {
-//   pgClient.query("SELECT * FROM values;", (pgError, queryResult) => {
-//     if (!queryResult || !queryResult.rows) {
-//       response.json([]);
-//     } else {
-//       response.send(`[${appId}] Hello from my backend app
-//       <br/>Days of week: ${JSON.stringify(queryResult.rows)}`);
-//       // response.json(queryResult.rows);
-//     }
-//   });
-// });
-
 app.get("/days/values", (request, response) => {
   pgClient.query("SELECT * FROM values;", (pgError, queryResult) => {
     if (!queryResult.rows) {
