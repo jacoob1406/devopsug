@@ -1,5 +1,6 @@
 #!/bin/sh
 
+kubectl delete configmap myapp-config
 kubectl delete svc mybackend-service
 kubectl delete deploy my-backend-deployment
 kubectl delete svc postgres-service

@@ -35,11 +35,6 @@ spec:
                 secretKeyRef:
                   name: postgres-secret
                   key: PGPASSWORD
-            - name: POSTGRES_USER
-              valueFrom:
-                configMapKeyRef:
-                  name: myapp-config
-                  key: PGUSER
 
   replicas: 1
   selector:

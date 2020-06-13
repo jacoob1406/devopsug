@@ -1,37 +1,37 @@
-const redis = require("redis");
-const getDay = require("date-fns/getDay");
+const keys = require("./keys");
 const express = require("express");
-
-const { v4: uuidv4 } = require("uuid");
-
-const appId = uuidv4();
-
-const port = 5000;
+const redis = require("redis");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+const getDay = require("date-fns/getDay");
 
 const getDayOfWeek = (date) => {
   return getDay(new Date(date));
 };
 
 const app = express();
+app.use(cors());
+app.use(bodyParser.json());
 
 const { Pool } = require("pg");
 const pgClient = new Pool({
-  host: "postgres-service",
-  port: 5432,
-  user: "postgres",
-  password: "pgpassword123",
-  database: "postgres",
+  host: keys.pgHost,
+  port: keys.pgPort,
+  user: keys.pgUser,
+  password: keys.pgPassword,
+  database: keys.pgDatabase,
 });
 
 pgClient.on("error", () => console.log("Cannot connect to PG database"));
 
 pgClient
   .query("CREATE TABLE IF NOT EXISTS values (number INT);")
-  .catch((err) => console.log(err));
+  .catch((err) => console.log(err))
+  .then(() => console.log("PG table initialized."));
 
 const redisClient = redis.createClient({
-  host: "redis-service",
-  port: 6379,
+  host: keys.redisHost,
+  port: keys.redisPort,
   retry_strategy: () => 1000,
 });
 
@@ -54,9 +54,10 @@ app.get("/days/:date", (request, response) => {
   redisClient.get(date, (err, cachedDay) => {
     if (!cachedDay) {
       const countedDay = getDayOfWeek(date);
-      pgClient
-        .query("INSERT INTO values (number) VALUES ('" + countedDay + "');")
-        .catch((pgError) => console.log(pgError));
+      pgClient.query(
+        `INSERT INTO values (number) VALUES (${countedDay})`,
+        (err) => console.log(err)
+      );
       redisClient.set(date, countedDay);
       response.send(countedDay.toString());
     } else {
@@ -65,6 +66,9 @@ app.get("/days/:date", (request, response) => {
   });
 });
 
+const port = 5000;
+
 app.listen(port, (err) => {
   console.log(`Backend listening on port ${port}`);
+  console.log(keys);
 });
