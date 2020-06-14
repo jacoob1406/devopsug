@@ -4,12 +4,14 @@ const redis = require("redis");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const getDay = require("date-fns/getDay");
+const { v4: uuidv4 } = require("uuid");
 
 const getDayOfWeek = (date) => {
   return getDay(new Date(date));
 };
 
 const app = express();
+const appId = uuidv4();
 app.use(cors());
 app.use(bodyParser.json());
 
@@ -70,5 +72,4 @@ const port = 5000;
 
 app.listen(port, (err) => {
   console.log(`Backend listening on port ${port}`);
-  console.log(keys);
 });
