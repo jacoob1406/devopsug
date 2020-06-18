@@ -39,6 +39,8 @@ function App() {
 
   const handleYearChange = (event) => setYear(event.currentTarget.value);
 
+  const isFromCache = () => (currentDayOfWeek)?.toString().includes('cache');
+
   return (
     <section className={css.container}>
       <h1>Get day of week app</h1>
@@ -51,8 +53,11 @@ function App() {
         handleYearChange={handleYearChange}
         onDateSubmit={onDateSubmit}
       />
-      {(currentDayOfWeek || currentDayOfWeek === 0) && (
+      {!isFromCache() && (currentDayOfWeek || currentDayOfWeek === 0) && (
         <h3>{daysOfWeek[currentDayOfWeek]}!</h3>
+      )}
+      {isFromCache() && (
+        <h3>FROM CACHE: {daysOfWeek[Number(currentDayOfWeek.slice(12,13))]}!</h3>
       )}
       <div>
         <ValuesChart daysValues={allValues} />
